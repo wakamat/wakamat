@@ -9,10 +9,17 @@ Claude Code の Skills / Sub-agents / Agent Teams を活用した業務効率化
 | `/humanize` | AI臭のある文章を自然な日本語に書き直す | writer |
 | `/proposal` | 企画書を作成する | planner |
 | `/chat` | 社内チャット・メールの文面を構成する | writer |
-| `/research` | マーケットリサーチとレポート作成 | researcher |
+| `/research` | マーケットリサーチとレポート作成（競合分析含む） | researcher |
 | `/document` | 報告書・提案書・マニュアル等の資料作成 | writer |
-| `/analysis` | 統計を用いたデータ分析と可視化 | analyst |
+| `/analysis` | 統計を用いたデータ分析と可視化（ROI分析含む） | analyst |
 | `/mockup` | 企画をもとにUIモックアップを作成 | developer |
+| `/persona` | ターゲットペルソナを詳細に作成 | researcher |
+| `/content-plan` | 3ヶ月間のコンテンツマーケティング計画を作成 | planner |
+| `/sns` | SNS投稿文を作成（X、Instagram、LinkedIn等） | writer |
+| `/copy` | マーケティングコピーを改善・ブラッシュアップ | writer |
+| `/keywords` | SEO・AI検索向けキーワード拡張 | researcher |
+| `/voc` | 顧客の声（レビュー・フィードバック）を分析 | analyst |
+| `/email-scenario` | メールマーケティングのシナリオを設計 | writer |
 
 ## Sub-agents
 
