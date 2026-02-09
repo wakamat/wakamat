@@ -2,5 +2,53 @@
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
-  "teammateMode": "auto"
+  "teammateMode": "auto",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "Edit",
+      "Write",
+      "Bash(python3 *)",
+      "Bash(node *)",
+      "Bash(npx *)",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(pip install *)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(open *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git reset --hard *)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Evaluate if Claude should stop working. Context: $ARGUMENTS\n\nCheck:\n1. All user-requested tasks are complete\n2. Output files are saved properly\n3. No errors remain unaddressed\n\nRespond with {\"ok\": true} to allow stopping, or {\"ok\": false, \"reason\": \"explanation\"} to continue working.",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Evaluate if this subagent completed its assigned task. Input: $ARGUMENTS\n\nCheck:\n1. The assigned task is fully complete\n2. Output quality meets the requirements specified in the skill\n3. Files are saved in the correct location\n\nReturn {\"ok\": true} to allow stopping, or {\"ok\": false, \"reason\": \"explanation\"} to continue.",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
 }
