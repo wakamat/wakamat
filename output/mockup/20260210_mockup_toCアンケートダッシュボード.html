@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>toC アンケート調査結果ダッシュボード</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #2563EB;
+      --primary-light: #EFF6FF;
+      --primary-dark: #1D4ED8;
+      --green: #10B981;
+      --green-light: #ECFDF5;
+      --yellow: #F59E0B;
+      --yellow-light: #FFFBEB;
+      --red: #EF4444;
+      --red-light: #FEF2F2;
+      --bg: #F8FAFC;
+      --card: #FFFFFF;
+      --border: #E2E8F0;
+      --text: #1E293B;
+      --text-muted: #64748B;
+      --text-light: #94A3B8;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,.08), 0 2px 4px -2px rgba(0,0,0,.04);
+    }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ========== HEADER ========== */
+    .site-header {
+      background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 60%, #3B82F6 100%);
+      color: #fff;
+      padding: 28px 24px 24px;
+    }
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .site-title {
+      font-size: clamp(18px, 2.5vw, 26px);
+      font-weight: 700;
+      letter-spacing: -.3px;
+    }
+    .site-subtitle {
+      font-size: 13px;
+      opacity: .75;
+      margin-top: 4px;
+    }
+    .header-badge {
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .header-badge strong { display: block; font-size: 14px; }
+
+    /* KPI Cards in header */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .kpi-card {
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 12px;
+      padding: 16px 18px;
+      backdrop-filter: blur(4px);
+    }
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      opacity: .75;
+      margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-size: clamp(22px, 3vw, 32px);
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .kpi-change {
+      font-size: 12px;
+      opacity: .8;
+    }
+    .kpi-change .up { color: #6EE7B7; }
+    .kpi-change .down { color: #FCA5A5; }
+
+    /* ========== MAIN LAYOUT ========== */
+    .main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 28px 20px 48px;
+    }
+
+    /* Section */
+    .section { margin-bottom: 36px; }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .icon {
+      width: 22px; height: 22px;
+      background: var(--primary);
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 12px;
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      box-shadow: var(--shadow-md);
+      padding: 20px 22px;
+      border: 1px solid var(--border);
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 14px;
+    }
+
+    /* Grid helpers */
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+
+    @media (max-width: 900px) {
+      .grid-3 { grid-template-columns: 1fr; }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .main { padding: 16px 12px 40px; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* Chart wrapper */
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+    }
+    .chart-wrap canvas { max-width: 100%; }
+
+    /* ========== DEMOGRAPHICS ========== */
+    .demo-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 2fr;
+      gap: 16px;
+    }
+    @media (max-width: 1100px) {
+      .demo-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px) {
+      .demo-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ========== NPS SCORE BAR ========== */
+    .nps-bar-wrap {
+      margin: 10px 0 18px;
+    }
+    .nps-bar-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .nps-bar {
+      display: flex;
+      border-radius: 8px;
+      overflow: hidden;
+      height: 32px;
+    }
+    .nps-bar-seg {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      transition: opacity .2s;
+    }
+    .nps-bar-seg:hover { opacity: .85; }
+    .nps-bar-seg.promoter  { background: var(--green); }
+    .nps-bar-seg.neutral   { background: var(--yellow); }
+    .nps-bar-seg.detractor { background: var(--red); }
+    .nps-legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    .nps-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .nps-dot {
+      width: 10px; height: 10px;
+      border-radius: 2px;
+    }
+
+    /* ========== WORD CLOUD ========== */
+    .wordcloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+    }
+    .wc-word {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-weight: 600;
+      cursor: default;
+      transition: background .15s, color .15s, transform .15s;
+    }
+    .wc-word:hover { background: var(--primary); color: #fff; transform: scale(1.05); }
+    .wc-word.size-5 { font-size: 20px; }
+    .wc-word.size-4 { font-size: 17px; }
+    .wc-word.size-3 { font-size: 14px; }
+    .wc-word.size-2 { font-size: 12px; }
+    .wc-word.size-1 { font-size: 11px; }
+
+    /* ========== COMMENT CARDS ========== */
+    .comment-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .comment-card:last-child { margin-bottom: 0; }
+    .comment-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+      flex-wrap: wrap;
+    }
+    .sentiment-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .sentiment-badge.pos { background: var(--green-light); color: #065F46; }
+    .sentiment-badge.neg { background: var(--red-light); color: #991B1B; }
+    .comment-text { font-size: 13px; color: var(--text); line-height: 1.6; }
+    .comment-rating {
+      display: flex;
+      gap: 2px;
+      align-items: center;
+    }
+    .star { color: #F59E0B; font-size: 12px; }
+    .star.empty { color: var(--border); }
+    .commenter { font-size: 11px; color: var(--text-light); }
+
+    /* ========== HEATMAP TABLE ========== */
+    .heatmap-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .heatmap-table th, .heatmap-table td {
+      padding: 8px 10px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .heatmap-table th {
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      font-size: 11px;
+    }
+    .heatmap-table thead th:first-child {
+      background: var(--primary-dark);
+    }
+    .heatmap-table tbody td:first-child {
+      background: #F1F5F9;
+      font-weight: 600;
+      color: var(--text);
+      text-align: left;
+    }
+    .hm-cell {
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    /* Correlation table */
+    .corr-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .corr-table th, .corr-table td {
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    .corr-table th {
+      background: #F1F5F9;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .corr-table tbody tr:nth-child(even) { background: #F8FAFC; }
+    .corr-table tbody tr:hover { background: var(--primary-light); }
+
+    /* NPS reasons table */
+    .reasons-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .reasons-table th, .reasons-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    .reasons-table th {
+      font-weight: 700;
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      background: #F8FAFC;
+    }
+    .reasons-table tbody tr:hover { background: var(--primary-light); }
+    .pct-bar-wrap { display: flex; align-items: center; gap: 6px; }
+    .pct-bar-bg {
+      flex: 1;
+      background: var(--border);
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .pct-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+    .pct-label { font-size: 11px; color: var(--text-muted); min-width: 30px; text-align: right; }
+
+    /* Scrollable containers */
+    .overflow-x { overflow-x: auto; }
+
+    /* Tabs */
+    .tab-list {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 14px;
+      background: #F1F5F9;
+      border-radius: 10px;
+      padding: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 7px 12px;
+      border: none;
+      background: transparent;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .tab-btn.active {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: var(--shadow);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Responsive chart height */
+    .h-200 { height: 200px; }
+    .h-250 { height: 250px; }
+    .h-300 { height: 300px; }
+    .h-320 { height: 320px; }
+    .h-350 { height: 350px; }
+
+    /* Footer */
+    .site-footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-light);
+      font-size: 12px;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-top">
+      <div>
+        <h1 class="site-title">toC アンケート調査結果ダッシュボード</h1>
+        <p class="site-subtitle">顧客満足度・NPS・フリーアンサー 総合分析レポート</p>
+      </div>
+      <div class="header-badge">
+        <strong>調査期間</strong>
+        2025年8月1日 〜 2026年1月31日<br>
+        最終更新: 2026年2月10日
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">総回答数</div>
+        <div class="kpi-value">1,247</div>
+        <div class="kpi-change">前期比 <span class="up">▲ 12.3%</span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">完了率</div>
+        <div class="kpi-value">89.2%</div>
+        <div class="kpi-change">前期比 <span class="up">▲ 2.1pt</span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">NPS スコア</div>
+        <div class="kpi-value">+42</div>
+        <div class="kpi-change">前期比 <span class="up">▲ 7pt</span></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">総合満足度</div>
+        <div class="kpi-value">4.2<span style="font-size:16px;opacity:.7">/5.0</span></div>
+        <div class="kpi-change">前期比 <span class="up">▲ 0.3pt</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- ========== SECTION 2: DEMOGRAPHICS ========== -->
+  <section class="section" aria-labelledby="sec-demo">
+    <h2 class="section-title" id="sec-demo">
+      <span class="icon" aria-hidden="true">01</span>
+      回答者属性（Demographics）
+    </h2>
+    <div class="demo-grid">
+      <!-- 年代別 -->
+      <div class="card">
+        <div class="card-title">年代別分布</div>
+        <div class="chart-wrap h-250">
+          <canvas id="chartAge" aria-label="年代別分布 棒グラフ" role="img"></canvas>
+        </div>
+      </div>
+      <!-- 性別 -->
+      <div class="card">
+        <div class="card-title">性別分布</div>
+        <div class="chart-wrap h-250">
+          <canvas id="chartGender" aria-label="性別分布 ドーナツチャート" role="img"></canvas>
+        </div>
+      </div>
+      <!-- 利用頻度 -->
+      <div class="card">
+        <div class="card-title">利用頻度</div>
+        <div class="chart-wrap h-250">
+          <canvas id="chartFrequency" aria-label="利用頻度 横棒グラフ" role="img"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SECTION 3: 満足度分析 ========== -->
+  <section class="section" aria-labelledby="sec-satisfaction">
+    <h2 class="section-title" id="sec-satisfaction">
+      <span class="icon" aria-hidden="true">02</span>
+      満足度分析
+    </h2>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">カテゴリ別満足度（レーダー）</div>
+        <div class="chart-wrap h-300">
+          <canvas id="chartRadar" aria-label="カテゴリ別満足度 レーダーチャート" role="img"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">総合満足度の月次推移（過去6ヶ月）</div>
+        <div class="chart-wrap h-300">
+          <canvas id="chartSatTrend" aria-label="満足度推移 折れ線グラフ" role="img"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SECTION 4: NPS分析 ========== -->
+  <section class="section" aria-labelledby="sec-nps">
+    <h2 class="section-title" id="sec-nps">
+      <span class="icon" aria-hidden="true">03</span>
+      NPS 分析（Net Promoter Score）
+    </h2>
+
+    <!-- NPS Score bar + donut -->
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-title">NPSスコア分布（推奨者 / 中立者 / 批判者）</div>
+        <div class="nps-bar-wrap">
+          <div class="nps-bar-labels">
+            <span>批判者（0〜6）</span>
+            <span>中立者（7〜8）</span>
+            <span>推奨者（9〜10）</span>
+          </div>
+          <div class="nps-bar" role="img" aria-label="NPS分布バー: 推奨者55%, 中立者32%, 批判者13%">
+            <div class="nps-bar-seg detractor" style="width:13%">13%</div>
+            <div class="nps-bar-seg neutral"   style="width:32%">32%</div>
+            <div class="nps-bar-seg promoter"  style="width:55%">55%</div>
+          </div>
+          <div class="nps-legend">
+            <div class="nps-legend-item">
+              <div class="nps-dot" style="background:var(--green)"></div>
+              <span>推奨者 55% (686人)</span>
+            </div>
+            <div class="nps-legend-item">
+              <div class="nps-dot" style="background:var(--yellow)"></div>
+              <span>中立者 32% (399人)</span>
+            </div>
+            <div class="nps-legend-item">
+              <div class="nps-dot" style="background:var(--red)"></div>
+              <span>批判者 13% (162人)</span>
+            </div>
+          </div>
+        </div>
+        <div class="chart-wrap h-200">
+          <canvas id="chartNpsBar" aria-label="NPS積み上げ棒グラフ" role="img"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">NPS スコアの月次推移（過去6ヶ月）</div>
+        <div class="chart-wrap h-300">
+          <canvas id="chartNpsTrend" aria-label="NPS推移 折れ線グラフ" role="img"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- NPS理由テーブル -->
+    <div class="card">
+      <div class="card-title">推奨者・批判者の主な理由</div>
+      <div class="tab-list" role="tablist" aria-label="推奨者・批判者タブ">
+        <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="tab-promoters"  id="btn-promoters"  onclick="switchTab(event,'tab-promoters')">推奨者（Promoters）</button>
+        <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-detractors" id="btn-detractors" onclick="switchTab(event,'tab-detractors')">批判者（Detractors）</button>
+      </div>
+      <div id="tab-promoters" class="tab-panel active" role="tabpanel" aria-labelledby="btn-promoters">
+        <div class="overflow-x">
+          <table class="reasons-table">
+            <thead>
+              <tr><th>理由カテゴリ</th><th>代表コメント</th><th style="min-width:140px">回答割合</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>品質・性能への満足</td>
+                <td>「他社製品と比較して品質が段違い」</td>
+                <td><div class="pct-bar-wrap"><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:72%;background:var(--green)"></div></div><span class="pct-label">72%</span></div></td>
+              </tr>
+              <tr>
+                <td>コストパフォーマンス</td>
+                <td>「価格以上の価値があると感じる」</td>
+                <td><div class="pct-bar-wrap"><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:61%;background:var(--green)"></div></div><span class="pct-label">61%</span></div></td>
+              </tr>
+              <tr>
+                <td>カスタマーサポートの迅速さ</td>
+                <td>「問題が発生してもすぐに解決してもらえた」</td>
+                <td><div class="pct-bar-wrap"><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:54%;background:var(--green)"></div></div><span class="pct-label">54%</span></div></td>
+              </tr>
+              <tr>
+                <td>使いやすさ・UI</td>
+                <td>「直感的に操作できて学習コストがない」</td>
+                <td><div class="pct-bar-wrap"><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:48%;background:var(--green)"></div></div><span class="pct-label">48%</span></div></td>
+              </tr>
+              <tr>
+                <td>配送スピードの速さ</td>
+                <td>「注文翌日に届いて驚いた」</td>
+                <td><div class="pct-bar-wrap"><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:39%;background:var(--green)"></div></div><span class="pct-label">39%</span></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="tab-detractors" class="tab-panel" role="tabpanel" aria-labelledby="btn-detractors">
+        <div class="overflow-x">
+          <table class="reasons-table">
+            <thead>
+              <tr><th>理由カテゴリ</th><th>代表コメント</th><th style="min-width:140px">回答割合</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>価格が高い</td>
+                <td>「品質は良いが、もう少し安くなれば」</td>
+                <td><div class="pct-bar-wrap"><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:68%;background:var(--red)"></div></div><span class="pct-label">68%</span></div></td>
+              </tr>
+              <tr>
+                <td>サポートの対応時間</td>
+                <td>「夜間・休日のサポートが繋がらない」</td>
+                <td><div class="pct-bar-wrap"><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:52%;background:var(--red)"></div></div><span class="pct-label">52%</span></div></td>
+              </tr>
+              <tr>
+                <td>配送の遅延・破損</td>
+                <td>「配送が遅く、梱包に改善の余地がある」</td>
+                <td><div class="pct-bar-wrap"><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:44%;background:var(--red)"></div></div><span class="pct-label">44%</span></div></td>
+              </tr>
+              <tr>
+                <td>機能の不足</td>
+                <td>「欲しい機能が標準搭載されていない」</td>
+                <td><div class="pct-bar-wrap"><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:36%;background:var(--red)"></div></div><span class="pct-label">36%</span></div></td>
+              </tr>
+              <tr>
+                <td>UI/UXの改善要望</td>
+                <td>「設定画面が複雑でわかりにくい」</td>
+                <td><div class="pct-bar-wrap"><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:29%;background:var(--red)"></div></div><span class="pct-label">29%</span></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SECTION 5: 自由回答分析 ========== -->
+  <section class="section" aria-labelledby="sec-freetext">
+    <h2 class="section-title" id="sec-freetext">
+      <span class="icon" aria-hidden="true">04</span>
+      自由回答分析
+    </h2>
+
+    <div class="grid-2" style="margin-bottom:16px">
+      <!-- ワードクラウド -->
+      <div class="card">
+        <div class="card-title">頻出キーワード（ワードクラウド）</div>
+        <div class="wordcloud" role="list" aria-label="頻出キーワード">
+          <span class="wc-word size-5" role="listitem">品質</span>
+          <span class="wc-word size-5" role="listitem">満足</span>
+          <span class="wc-word size-4" role="listitem">使いやすい</span>
+          <span class="wc-word size-4" role="listitem">価格</span>
+          <span class="wc-word size-4" role="listitem">配送</span>
+          <span class="wc-word size-3" role="listitem">サポート</span>
+          <span class="wc-word size-3" role="listitem">デザイン</span>
+          <span class="wc-word size-3" role="listitem">リピート</span>
+          <span class="wc-word size-3" role="listitem">おすすめ</span>
+          <span class="wc-word size-3" role="listitem">改善</span>
+          <span class="wc-word size-2" role="listitem">速い</span>
+          <span class="wc-word size-2" role="listitem">コスパ</span>
+          <span class="wc-word size-2" role="listitem">機能</span>
+          <span class="wc-word size-2" role="listitem">丁寧</span>
+          <span class="wc-word size-2" role="listitem">不便</span>
+          <span class="wc-word size-2" role="listitem">アプリ</span>
+          <span class="wc-word size-1" role="listitem">操作性</span>
+          <span class="wc-word size-1" role="listitem">梱包</span>
+          <span class="wc-word size-1" role="listitem">色</span>
+          <span class="wc-word size-1" role="listitem">バリエーション</span>
+          <span class="wc-word size-1" role="listitem">対応</span>
+          <span class="wc-word size-1" role="listitem">通知</span>
+        </div>
+      </div>
+      <!-- Positive/Negative -->
+      <div class="card">
+        <div class="card-title">ポジティブ / ネガティブ 比率</div>
+        <div class="chart-wrap h-250">
+          <canvas id="chartSentiment" aria-label="感情分析 ドーナツチャート" role="img"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- コメントカード -->
+    <div class="card">
+      <div class="card-title">代表的な回答コメント（抜粋）</div>
+      <div aria-label="代表コメント一覧">
+
+        <article class="comment-card">
+          <div class="comment-meta">
+            <span class="sentiment-badge pos">ポジティブ</span>
+            <div class="comment-rating" aria-label="評価5つ星">
+              <span class="star" aria-hidden="true">★</span><span class="star" aria-hidden="true">★</span>
+              <span class="star" aria-hidden="true">★</span><span class="star" aria-hidden="true">★</span>
+              <span class="star" aria-hidden="true">★</span>
+            </div>
+            <span class="commenter">30代・女性・毎日利用</span>
+          </div>
+          <p class="comment-text">「使い始めてから半年以上経ちますが、品質が全く落ちず非常に満足しています。特にカスタマーサポートの対応が丁寧で、些細な質問にも素早く回答してもらえるので安心して使えます。友人にも積極的に勧めています。」</p>
+        </article>
+
+        <article class="comment-card">
+          <div class="comment-meta">
+            <span class="sentiment-badge pos">ポジティブ</span>
+            <div class="comment-rating" aria-label="評価4つ星">
+              <span class="star" aria-hidden="true">★</span><span class="star" aria-hidden="true">★</span>
+              <span class="star" aria-hidden="true">★</span><span class="star" aria-hidden="true">★</span>
+              <span class="star empty" aria-hidden="true">★</span>
+            </div>
+            <span class="commenter">40代・男性・週数回利用</span>
+          </div>
+          <p class="comment-text">「デザインがシンプルでスタイリッシュ。使いやすさも◎。価格がもう少し安ければ文句なしで星5をつけるところです。コスパを考えるとリーズナブルとは言えないですが、それでも品質を考えれば納得できる範囲です。」</p>
+        </article>
+
+        <article class="comment-card">
+          <div class="comment-meta">
+            <span class="sentiment-badge neg">ネガティブ</span>
+            <div class="comment-rating" aria-label="評価2つ星">
+              <span class="star" aria-hidden="true">★</span><span class="star" aria-hidden="true">★</span>
+              <span class="star empty" aria-hidden="true">★</span><span class="star empty" aria-hidden="true">★</span>
+              <span class="star empty" aria-hidden="true">★</span>
+            </div>
+            <span class="commenter">20代・男性・月1回未満</span>
+          </div>
+          <p class="comment-text">「配送に2週間以上かかった上、梱包が雑で商品の角が潰れていました。初回なので一応使えますが、この経験では次回購入を躊躇してしまいます。サポートへ連絡しましたが解決に時間がかかりました。」</p>
+        </article>
+
+        <article class="comment-card">
+          <div class="comment-meta">
+            <span class="sentiment-badge pos">ポジティブ</span>
+            <div class="comment-rating" aria-label="評価5つ星">
+              <span class="star" aria-hidden="true">★</span><span class="star" aria-hidden="true">★</span>
+              <span class="star" aria-hidden="true">★</span><span class="star" aria-hidden="true">★</span>
+              <span class="star" aria-hidden="true">★</span>
+            </div>
+            <span class="commenter">50代・女性・週1回利用</span>
+          </div>
+          <p class="comment-text">「50代でもアプリが直感的に使えて嬉しい。文字が大きく、操作がわかりやすいです。以前は別のサービスを使っていましたが、乗り換えてから操作に困ることがなくなりました。年代を問わず使えるのが素晴らしいです。」</p>
+        </article>
+
+        <article class="comment-card">
+          <div class="comment-meta">
+            <span class="sentiment-badge neg">ネガティブ</span>
+            <div class="comment-rating" aria-label="評価3つ星">
+              <span class="star" aria-hidden="true">★</span><span class="star" aria-hidden="true">★</span>
+              <span class="star" aria-hidden="true">★</span><span class="star empty" aria-hidden="true">★</span>
+              <span class="star empty" aria-hidden="true">★</span>
+            </div>
+            <span class="commenter">30代・その他・月数回利用</span>
+          </div>
+          <p class="comment-text">「夜間・休日のサポート対応が全くないのが不満です。平日昼間しか問い合わせできないのは現代のサービスとして遅れていると感じます。それ以外の品質・使いやすさは申し分ないだけに、この点が残念。改善を強く希望します。」</p>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SECTION 6: クロス集計 ========== -->
+  <section class="section" aria-labelledby="sec-cross">
+    <h2 class="section-title" id="sec-cross">
+      <span class="icon" aria-hidden="true">05</span>
+      クロス集計
+    </h2>
+    <div class="grid-2">
+      <!-- Heatmap: 年代×満足度 -->
+      <div class="card">
+        <div class="card-title">年代 × 総合満足度 ヒートマップ</div>
+        <div class="overflow-x">
+          <table class="heatmap-table" aria-label="年代と総合満足度のクロス集計">
+            <thead>
+              <tr>
+                <th>年代</th>
+                <th>1点</th>
+                <th>2点</th>
+                <th>3点</th>
+                <th>4点</th>
+                <th>5点</th>
+                <th>平均</th>
+              </tr>
+            </thead>
+            <tbody id="heatmapBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 利用頻度×NPS -->
+      <div class="card">
+        <div class="card-title">利用頻度 × NPS 相関テーブル</div>
+        <div class="overflow-x">
+          <table class="corr-table" aria-label="利用頻度とNPSの相関テーブル">
+            <thead>
+              <tr>
+                <th>利用頻度</th>
+                <th>推奨者<br><small style="font-weight:400;color:var(--green)">(9〜10)</small></th>
+                <th>中立者<br><small style="font-weight:400;color:var(--yellow)">(7〜8)</small></th>
+                <th>批判者<br><small style="font-weight:400;color:var(--red)">(0〜6)</small></th>
+                <th>NPS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="text-align:left;font-weight:600">毎日</td>
+                <td style="color:var(--green);font-weight:700">74%</td>
+                <td>20%</td>
+                <td style="color:var(--red)">6%</td>
+                <td><strong style="color:var(--green)">+68</strong></td>
+              </tr>
+              <tr>
+                <td style="text-align:left;font-weight:600">週数回</td>
+                <td style="color:var(--green);font-weight:700">62%</td>
+                <td>27%</td>
+                <td style="color:var(--red)">11%</td>
+                <td><strong style="color:var(--green)">+51</strong></td>
+              </tr>
+              <tr>
+                <td style="text-align:left;font-weight:600">週1回</td>
+                <td style="color:var(--green);font-weight:700">54%</td>
+                <td>31%</td>
+                <td style="color:var(--red)">15%</td>
+                <td><strong style="color:var(--green)">+39</strong></td>
+              </tr>
+              <tr>
+                <td style="text-align:left;font-weight:600">月数回</td>
+                <td style="color:var(--green);font-weight:700">41%</td>
+                <td>38%</td>
+                <td style="color:var(--red)">21%</td>
+                <td><strong style="color:var(--yellow)">+20</strong></td>
+              </tr>
+              <tr>
+                <td style="text-align:left;font-weight:600">月1回未満</td>
+                <td style="color:var(--green);font-weight:700">28%</td>
+                <td>35%</td>
+                <td style="color:var(--red)">37%</td>
+                <td><strong style="color:var(--red)">-9</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>toC アンケート調査結果ダッシュボード &nbsp;|&nbsp; 調査期間: 2025年8月〜2026年1月 &nbsp;|&nbsp; n=1,247</p>
+  <p style="margin-top:4px">このデータはデモ用のダミーデータです。実際の調査結果ではありません。</p>
+</footer>
+
+<script>
+/* ========================================================
+   Chart.js グローバル設定
+   ======================================================== */
+Chart.defaults.font.family = "system-ui, -apple-system, 'Segoe UI', sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = "#64748B";
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.plugins.legend.labels.padding = 14;
+
+const PRIMARY   = "#2563EB";
+const PRIMARY_L = "rgba(37,99,235,.12)";
+const GREEN     = "#10B981";
+const YELLOW    = "#F59E0B";
+const RED       = "#EF4444";
+const ORANGE    = "#F97316";
+const PURPLE    = "#8B5CF6";
+const TEAL      = "#14B8A6";
+
+/* ---- 共通オプション ---- */
+function lineOpts(extra={}) {
+  return Object.assign({
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { maxRotation: 0 } },
+      y: { grid: { color: "#F1F5F9" }, ticks: { precision: 1 } }
+    }
+  }, extra);
+}
+
+/* ====================================================
+   1. 年代別 棒グラフ
+   ==================================================== */
+new Chart(document.getElementById("chartAge"), {
+  type: "bar",
+  data: {
+    labels: ["10代", "20代", "30代", "40代", "50代", "60代以上"],
+    datasets: [{
+      label: "回答者数",
+      data: [82, 287, 341, 298, 175, 64],
+      backgroundColor: [
+        "#BFDBFE","#93C5FD","#60A5FA","#3B82F6","#2563EB","#1D4ED8"
+      ],
+      borderRadius: 6,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.raw}人 (${(ctx.raw/1247*100).toFixed(1)}%)`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: "#F1F5F9" }, ticks: { stepSize: 50 } }
+    }
+  }
+});
+
+/* ====================================================
+   2. 性別 ドーナツ
+   ==================================================== */
+new Chart(document.getElementById("chartGender"), {
+  type: "doughnut",
+  data: {
+    labels: ["男性", "女性", "その他/未回答"],
+    datasets: [{
+      data: [521, 658, 68],
+      backgroundColor: [PRIMARY, GREEN, YELLOW],
+      borderWidth: 2, borderColor: "#fff",
+      hoverOffset: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: "62%",
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: { padding: 12 }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.label}: ${ctx.raw}人 (${(ctx.raw/1247*100).toFixed(1)}%)`
+        }
+      }
+    }
+  }
+});
+
+/* ====================================================
+   3. 利用頻度 横棒グラフ
+   ==================================================== */
+new Chart(document.getElementById("chartFrequency"), {
+  type: "bar",
+  data: {
+    labels: ["毎日", "週数回", "週1回", "月数回", "月1回未満"],
+    datasets: [{
+      label: "回答者数",
+      data: [213, 389, 274, 248, 123],
+      backgroundColor: [
+        "rgba(37,99,235,.85)","rgba(37,99,235,.7)",
+        "rgba(37,99,235,.55)","rgba(37,99,235,.4)","rgba(37,99,235,.25)"
+      ],
+      borderRadius: 4,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    indexAxis: "y",
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.raw}人 (${(ctx.raw/1247*100).toFixed(1)}%)`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: "#F1F5F9" } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+/* ====================================================
+   4. レーダーチャート（カテゴリ別満足度）
+   ==================================================== */
+new Chart(document.getElementById("chartRadar"), {
+  type: "radar",
+  data: {
+    labels: ["品質", "価格", "デザイン", "使いやすさ", "カスタマー\nサポート", "配送スピード"],
+    datasets: [
+      {
+        label: "今期（2026年1月）",
+        data: [4.5, 3.6, 4.3, 4.1, 3.9, 4.2],
+        borderColor: PRIMARY,
+        backgroundColor: "rgba(37,99,235,.12)",
+        pointBackgroundColor: PRIMARY,
+        pointRadius: 4, borderWidth: 2
+      },
+      {
+        label: "前期（2025年7月）",
+        data: [4.1, 3.4, 3.9, 3.7, 3.5, 3.8],
+        borderColor: TEAL,
+        backgroundColor: "rgba(20,184,166,.1)",
+        pointBackgroundColor: TEAL,
+        pointRadius: 4, borderWidth: 2,
+        borderDash: [4, 4]
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: "bottom" }
+    },
+    scales: {
+      r: {
+        min: 0, max: 5,
+        ticks: { stepSize: 1, font: { size: 10 } },
+        pointLabels: { font: { size: 11 } },
+        grid: { color: "#E2E8F0" }
+      }
+    }
+  }
+});
+
+/* ====================================================
+   5. 満足度月次推移 折れ線
+   ==================================================== */
+new Chart(document.getElementById("chartSatTrend"), {
+  type: "line",
+  data: {
+    labels: ["2025年8月", "9月", "10月", "11月", "12月", "2026年1月"],
+    datasets: [
+      {
+        label: "総合満足度",
+        data: [3.7, 3.8, 3.9, 4.0, 4.1, 4.2],
+        borderColor: PRIMARY, backgroundColor: PRIMARY_L,
+        fill: true, tension: 0.35, pointRadius: 5,
+        pointBackgroundColor: PRIMARY, borderWidth: 2
+      },
+      {
+        label: "目標値",
+        data: [4.0, 4.0, 4.0, 4.0, 4.0, 4.0],
+        borderColor: RED, borderDash: [6, 4],
+        backgroundColor: "transparent", borderWidth: 1.5,
+        pointRadius: 0
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: "bottom" },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toFixed(1)} / 5.0`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { min: 3.0, max: 5.0, ticks: { stepSize: 0.5 }, grid: { color: "#F1F5F9" } }
+    }
+  }
+});
+
+/* ====================================================
+   6. NPS横棒（積み上げ）チャート ← シンプルに月別積み上げ
+   ==================================================== */
+new Chart(document.getElementById("chartNpsBar"), {
+  type: "bar",
+  data: {
+    labels: ["2025年8月", "9月", "10月", "11月", "12月", "2026年1月"],
+    datasets: [
+      {
+        label: "推奨者",
+        data: [48, 50, 51, 53, 54, 55],
+        backgroundColor: GREEN, stack: "nps"
+      },
+      {
+        label: "中立者",
+        data: [35, 34, 33, 33, 32, 32],
+        backgroundColor: YELLOW, stack: "nps"
+      },
+      {
+        label: "批判者",
+        data: [17, 16, 16, 14, 14, 13],
+        backgroundColor: RED, stack: "nps"
+      }
+    ]
+  },
+  options: {
+    indexAxis: "y",
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: "bottom" },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}%`
+        }
+      }
+    },
+    scales: {
+      x: {
+        stacked: true, max: 100,
+        grid: { color: "#F1F5F9" },
+        ticks: { callback: v => v + "%" }
+      },
+      y: { stacked: true, grid: { display: false } }
+    }
+  }
+});
+
+/* ====================================================
+   7. NPS月次推移 折れ線
+   ==================================================== */
+new Chart(document.getElementById("chartNpsTrend"), {
+  type: "line",
+  data: {
+    labels: ["2025年8月", "9月", "10月", "11月", "12月", "2026年1月"],
+    datasets: [{
+      label: "NPS スコア",
+      data: [31, 34, 35, 39, 40, 42],
+      borderColor: PRIMARY, backgroundColor: PRIMARY_L,
+      fill: true, tension: 0.35,
+      pointRadius: 5, pointBackgroundColor: PRIMARY, borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: { label: ctx => ` NPS: +${ctx.raw}` }
+      }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { min: 0, max: 60, ticks: { stepSize: 10 }, grid: { color: "#F1F5F9" } }
+    }
+  }
+});
+
+/* ====================================================
+   8. 感情分析 ドーナツ
+   ==================================================== */
+new Chart(document.getElementById("chartSentiment"), {
+  type: "doughnut",
+  data: {
+    labels: ["ポジティブ", "ニュートラル", "ネガティブ"],
+    datasets: [{
+      data: [62, 24, 14],
+      backgroundColor: [GREEN, YELLOW, RED],
+      borderWidth: 2, borderColor: "#fff", hoverOffset: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: "60%",
+    plugins: {
+      legend: { position: "bottom" },
+      tooltip: {
+        callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}%` }
+      }
+    }
+  }
+});
+
+/* ====================================================
+   9. ヒートマップ テーブル 生成
+   ==================================================== */
+const heatmapData = [
+  { age: "10代", scores: [3, 7, 24, 31, 17], avg: 3.8 },
+  { age: "20代", scores: [9, 18, 58, 128, 74], avg: 4.0 },
+  { age: "30代", scores: [7, 21, 62, 152, 99], avg: 4.2 },
+  { age: "40代", scores: [5, 15, 54, 140, 84], avg: 4.2 },
+  { age: "50代", scores: [4, 12, 38, 79, 42], avg: 4.1 },
+  { age: "60代以上", scores: [2, 5, 18, 28, 11], avg: 3.9 },
+];
+
+// ヒートマップの最大値と最小値
+const allCounts = heatmapData.flatMap(r => r.scores);
+const maxC = Math.max(...allCounts);
+const minC = Math.min(...allCounts);
+
+function heatColor(val) {
+  const ratio = (val - minC) / (maxC - minC + 1);
+  // 白〜青のグラデーション
+  const r = Math.round(239 - ratio * (239 - 37));
+  const g = Math.round(246 - ratio * (246 - 99));
+  const b = Math.round(255 - ratio * (255 - 235));
+  const textColor = ratio > 0.55 ? "#fff" : "#1E293B";
+  return { bg: `rgb(${r},${g},${b})`, text: textColor };
+}
+
+const tbody = document.getElementById("heatmapBody");
+heatmapData.forEach(row => {
+  const tr = document.createElement("tr");
+  const rowTotal = row.scores.reduce((a,b)=>a+b,0);
+  tr.innerHTML = `<td>${row.age}<br><small style="color:var(--text-light);font-weight:400">${rowTotal}人</small></td>`;
+  row.scores.forEach(v => {
+    const { bg, text } = heatColor(v);
+    tr.innerHTML += `<td><div class="hm-cell" style="background:${bg};color:${text};padding:4px 6px;border-radius:4px">${v}</div></td>`;
+  });
+  const avgColor = row.avg >= 4.2 ? GREEN : row.avg >= 4.0 ? PRIMARY : YELLOW;
+  tr.innerHTML += `<td style="font-weight:700;color:${avgColor}">${row.avg.toFixed(1)}</td>`;
+  tbody.appendChild(tr);
+});
+
+/* ====================================================
+   Tab switcher
+   ==================================================== */
+function switchTab(e, panelId) {
+  const container = e.target.closest(".card") || document.body;
+  container.querySelectorAll(".tab-btn").forEach(b => {
+    b.classList.remove("active");
+    b.setAttribute("aria-selected", "false");
+  });
+  container.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+  e.target.classList.add("active");
+  e.target.setAttribute("aria-selected", "true");
+  document.getElementById(panelId).classList.add("active");
+}
+</script>
+</body>
+</html>
